@@ -74,6 +74,15 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
       result(true)
     case "captureSnapshot":
       captureSnapshot(url: args["url"] as? String ?? "", result: result)
+    case "shareUrl":
+      shareUrl(
+        url: args["url"] as? String ?? "",
+        title: args["title"] as? String ?? "",
+        result: result
+      )
+    case "hapticFeedback":
+      hapticFeedback(style: args["style"] as? String ?? "medium")
+      result(nil)
     case "clearWebDataTypes":
       let types = args["types"] as? [String] ?? []
       clearWebDataTypes(types, result: result)
@@ -222,18 +231,107 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
     return root
   }
 
+  // MARK: - 分享
+
+  private func shareUrl(url: String, title: String, result: @escaping FlutterResult) {
+    guard let urlObj = URL(string: url) else {
+      result(FlutterError(code: "INVALID_URL", message: "无效的链接", details: nil))
+      return
+    }
+    var items: [Any] = [urlObj]
+    if !title.isEmpty {
+      items.insert(title, at: 0)
+    }
+    let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
+    activityVC.completionWithItemsHandler = { _, _, _, _ in
+      result(nil)
+    }
+    DispatchQueue.main.async {
+      guard let root = self.keyWindow()?.rootViewController else {
+        result(FlutterError(code: "NO_VC", message: "无法显示分享面板", details: nil))
+        return
+      }
+      var top = root
+      while let presented = top.presentedViewController {
+        top = presented
+      }
+      if let popover = activityVC.popoverPresentationController {
+        popover.sourceView = top.view
+        popover.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.maxY, width: 0, height: 0)
+        popover.permittedArrowDirections = []
+      }
+      top.present(activityVC, animated: true)
+    }
+  }
+
+  private func hapticFeedback(style: String) {
+    DispatchQueue.main.async {
+      let generator: UIImpactFeedbackGenerator
+      switch style {
+      case "light":
+        generator = UIImpactFeedbackGenerator(style: .light)
+      case "heavy":
+        generator = UIImpactFeedbackGenerator(style: .heavy)
+      case "success":
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        return
+      case "warning":
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        return
+      case "error":
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+        return
+      default:
+        generator = UIImpactFeedbackGenerator(style: .medium)
+      }
+      generator.impactOccurred()
+    }
+  }
+
+  private func keyWindow() -> UIWindow? {
+    for scene in UIApplication.shared.connectedScenes {
+      guard let windowScene = scene as? UIWindowScene else { continue }
+      for window in windowScene.windows where window.isKeyWindow {
+        return window
+      }
+    }
+    return nil
+  }
+
   // MARK: - 标签快照（截取 WKWebView 快照）
 
   /// 截取目标标签快照：优先按 URL 匹配，其次取可见 WebView。
-  /// PNG 写入沙盒 Caches/Snapshots（避免大消息传输），返回 {path, url}。
+  /// 自带重试（最多 2 次，间隔 500ms），PNG 写入沙盒 Caches/Snapshots，返回 {path, url}。
   private func captureSnapshot(url: String, result: @escaping FlutterResult) {
+    captureSnapshotWithRetry(url: url, result: result, attempts: 0)
+  }
+
+  private func captureSnapshotWithRetry(
+    url: String,
+    result: @escaping FlutterResult,
+    attempts: Int
+  ) {
     guard let webView = findWebView(for: url) else {
-      result(nil)
+      if attempts < 2 {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+          self?.captureSnapshotWithRetry(url: url, result: result, attempts: attempts + 1)
+        }
+      } else {
+        result(nil)
+      }
       return
     }
     webView.takeSnapshot(with: nil) { [weak self] image, error in
-      guard let self = self, let image = image, error == nil,
-            let data = image.pngData() else {
+      guard let self = self else { return }
+      // 截图失败或图片过空白（平均亮度接近白），重试
+      let isBlank = image == nil || self._isBlankImage(image!)
+      if (error != nil || image == nil || isBlank), attempts < 2 {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+          self?.captureSnapshotWithRetry(url: url, result: result, attempts: attempts + 1)
+        }
+        return
+      }
+      guard let image = image, let data = image.pngData() else {
         result(nil)
         return
       }
@@ -254,13 +352,54 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
     }
   }
 
+  /// 检测图片是否为空白（平均亮度 > 245 视为空白）。
+  private func _isBlankImage(_ image: UIImage) -> Bool {
+    guard let cgImage = image.cgImage else { return false }
+    let width = 8, height = 8
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    var rawData = [UInt8](repeating: 0, count: width * height * 4)
+    guard let context = CGContext(
+      data: &rawData,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: width * 4,
+      space: colorSpace,
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { return false }
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+    var totalBrightness = 0
+    for i in stride(from: 0, to: rawData.count, by: 4) {
+      totalBrightness += Int(rawData[i]) + Int(rawData[i + 1]) + Int(rawData[i + 2])
+    }
+    let avg = Double(totalBrightness) / Double(width * height * 3)
+    return avg > 245
+  }
+
   /// 查找目标 WKWebView：URL 精确/前缀匹配优先，其次取可见 WebView。
+  /// 使用 connectedScenes 找 keyWindow（兼容 iOS 15+）。
   private func findWebView(for url: String) -> WKWebView? {
     var visibleFallback: WKWebView?
     let target = url.lowercased()
-    for window in UIApplication.shared.windows {
-      if let found = matchWebView(in: window, target: target, fallback: &visibleFallback) {
-        return found
+    let scenes = UIApplication.shared.connectedScenes
+    for scene in scenes {
+      guard let windowScene = scene as? UIWindowScene else { continue }
+      for window in windowScene.windows {
+        if !window.isKeyWindow { continue }
+        if let found = self.matchWebView(in: window, target: target, fallback: &visibleFallback) {
+          return found
+        }
+      }
+    }
+    // 兜底：遍历所有 window
+    if visibleFallback == nil {
+      for scene in scenes {
+        guard let windowScene = scene as? UIWindowScene else { continue }
+        for window in windowScene.windows {
+          if let found = self.matchWebView(in: window, target: target, fallback: &visibleFallback) {
+            return found
+          }
+        }
       }
     }
     return visibleFallback
@@ -272,7 +411,8 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
     fallback: inout WKWebView?
   ) -> WKWebView? {
     if let wv = view as? WKWebView {
-      if !wv.isHidden && wv.frame.width > 1 && wv.alpha > 0.5 {
+      // 放宽可见性判断：只要不在隐藏层级中且有尺寸
+      if !wv.isHidden && wv.frame.width > 0 && wv.frame.height > 0 {
         if fallback == nil { fallback = wv }
         if !target.isEmpty,
            let current = wv.url?.absoluteString.lowercased(),

@@ -42,6 +42,11 @@ class _DownloadPageState extends State<DownloadPage> {
     setState(() => _files = files);
   }
 
+  String _formatTime(DateTime t) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
+  }
+
   String _fileName(String url) {
     try {
       final uri = Uri.parse(url);
@@ -306,8 +311,8 @@ class _DownloadPageState extends State<DownloadPage> {
           style: const TextStyle(fontSize: 14),
         ),
         subtitle: Text(
-          DownloadService.formatSize(file.size),
-          style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+          '完成于 ${_formatTime(file.completedAt)} · ${DownloadService.formatSize(file.size)}',
+          style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
         ),
         onTap: () => NativeBridge.previewFile(file.path),
         trailing: PopupMenuButton<String>(

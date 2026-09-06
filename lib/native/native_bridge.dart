@@ -95,6 +95,16 @@ class NativeBridge {
     await invoke('previewFile', {'path': path});
   }
 
+  /// 触感反馈（UIImpactFeedbackGenerator）。style: light/medium/heavy/success/warning/error。
+  static Future<void> hapticFeedback({String style = 'medium'}) async {
+    await invoke('hapticFeedback', {'style': style});
+  }
+
+  /// 调用 iOS 原生分享面板（UIActivityViewController）。
+  static Future<void> shareUrl({required String url, String? title}) async {
+    await invoke('shareUrl', {'url': url, 'title': title ?? ''});
+  }
+
   /// 截取指定标签快照（Swift 写 PNG 文件，Dart 读文件避免大消息传输）。
   static Future<Uint8List?> captureSnapshot(String url) async {
     final value = await invoke('captureSnapshot', {'url': url});

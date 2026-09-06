@@ -54,6 +54,90 @@ class _BookmarksPageState extends State<BookmarksPage> {
     _load();
   }
 
+  void _showActionMenu(Bookmark bookmark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: Color(0xFF3B82F6)),
+              title: const Text('编辑'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _edit(bookmark);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Color(0xFFEA6668)),
+              title: const Text('删除', style: TextStyle(color: Color(0xFFEA6668))),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _delete(bookmark);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _edit(Bookmark bookmark) async {
+    final titleController = TextEditingController(text: bookmark.title);
+    final urlController = TextEditingController(text: bookmark.url);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('编辑书签'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: '名称',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlController,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: '网址',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    final title = titleController.text.trim();
+    final url = urlController.text.trim();
+    if (title.isEmpty || url.isEmpty) return;
+    await DatabaseHelper.instance.updateBookmark(bookmark.id!, title, url);
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,7 +168,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     final bookmark = _bookmarks[index];
                     return ListTile(
                       onTap: () => Navigator.of(context).pop(bookmark.url),
-                      onLongPress: () => _delete(bookmark),
+                      onLongPress: () => _showActionMenu(bookmark),
                       leading: _Favicon(title: bookmark.title),
                       title: Text(
                         bookmark.title,
@@ -98,17 +182,16 @@ class _BookmarksPageState extends State<BookmarksPage> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
                       ),
-                      trailing: GestureDetector(
-                        onTap: () => _delete(bookmark),
-                        behavior: HitTestBehavior.opaque,
-                        child: const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: Color(0xFFB0B7C3),
-                          ),
-                        ),
+                      trailing: PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_horiz, size: 18, color: Color(0xFFB0B7C3)),
+                        onSelected: (value) {
+                          if (value == 'edit') _edit(bookmark);
+                          if (value == 'delete') _delete(bookmark);
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('编辑')),
+                          PopupMenuItem(value: 'delete', child: Text('删除', style: TextStyle(color: Color(0xFFEA6668)))),
+                        ],
                       ),
                     );
                   },

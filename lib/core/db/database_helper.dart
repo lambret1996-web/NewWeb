@@ -82,6 +82,16 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> updateBookmark(int id, String title, String url) async {
+    final db = await database;
+    await db.update(
+      'bookmarks',
+      {'title': title, 'url': url},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<void> deleteBookmark(int id) async {
     final db = await database;
     await db.delete('bookmarks', where: 'id = ?', whereArgs: [id]);

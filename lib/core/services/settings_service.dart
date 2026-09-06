@@ -14,6 +14,8 @@ class SettingsService {
   static const String kTranslateMode = 'translate_mode';
   static const String kAutoTranslateDomains = 'auto_translate_domains';
   static const String kAdblockWhitelist = 'adblock_whitelist';
+  static const String kGravitySensor = 'gravity_sensor';
+  static const String kMenuOrder = 'menu_order';
 
   static const Map<String, String> searchEngines = {
     'baidu': '百度',
@@ -141,5 +143,28 @@ class SettingsService {
   Future<void> setAdblockWhitelist(List<String> domains) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(kAdblockWhitelist, domains);
+  }
+
+  // ---- 重力感应（菜单拖拽排序） ----
+
+  Future<bool> isGravitySensorEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(kGravitySensor) ?? false;
+  }
+
+  Future<void> setGravitySensor(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kGravitySensor, value);
+  }
+
+  /// 更多菜单自定义顺序（id 列表），为空表示默认顺序。
+  Future<List<String>> getMenuOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(kMenuOrder) ?? [];
+  }
+
+  Future<void> setMenuOrder(List<String> order) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(kMenuOrder, order);
   }
 }

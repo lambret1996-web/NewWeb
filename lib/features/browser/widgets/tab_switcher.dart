@@ -176,6 +176,7 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
       backgroundColor: const Color(0xFFF5F6F8),
       elevation: 0,
       scrolledUnderElevation: 0,
+      automaticallyImplyLeading: false,
       centerTitle: true,
       title: Text(
         '标签页（${widget.manager.count}）',
@@ -433,7 +434,7 @@ class _TabCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  tab.url,
+                  _displayUrl(tab.url),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style:
@@ -475,7 +476,7 @@ class _TabCard extends StatelessWidget {
             const Icon(Icons.public, size: 28, color: Color(0xFFB6C2D9)),
             const SizedBox(height: 4),
             Text(
-              _initial(tab.title),
+              _initial(tab.url),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -488,9 +489,21 @@ class _TabCard extends StatelessWidget {
     );
   }
 
-  String _initial(String title) {
-    final t = title.trim();
-    if (t.isEmpty) return '网';
-    return t.characters.first.toUpperCase();
+  /// 从 URL 提取域名首字母（占位图用）。
+  String _initial(String url) {
+    try {
+      final host = Uri.parse(url).host;
+      if (host.isNotEmpty) return host.characters.first.toUpperCase();
+    } catch (_) {}
+    return '网';
+  }
+
+  /// 从 URL 提取简化域名（卡片显示用）。
+  String _displayUrl(String url) {
+    try {
+      final host = Uri.parse(url).host;
+      if (host.isNotEmpty) return host;
+    } catch (_) {}
+    return url;
   }
 }

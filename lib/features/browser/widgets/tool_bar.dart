@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// 底部工具栏：后退 / 前进 / 新建标签 / 标签页（显示数量） / 更多。
+/// 底部工具栏：后退 / 前进 / 分享 / 标签页（显示数量） / 更多。
+/// iOS 风格：可用时蓝色，不可用时灰色。
 class ToolBar extends StatelessWidget {
   const ToolBar({
     super.key,
@@ -8,7 +9,7 @@ class ToolBar extends StatelessWidget {
     required this.canGoForward,
     required this.onBack,
     required this.onForward,
-    required this.onNewTab,
+    required this.onShare,
     required this.onTabs,
     required this.onMore,
     required this.tabCount,
@@ -18,16 +19,16 @@ class ToolBar extends StatelessWidget {
   final bool canGoForward;
   final VoidCallback onBack;
   final VoidCallback onForward;
-  final VoidCallback onNewTab;
+  final VoidCallback onShare;
   final VoidCallback onTabs;
   final VoidCallback onMore;
   final int tabCount;
 
+  static const Color _activeColor = Color(0xFF3B82F6);
+  static const Color _disabledColor = Color(0xFF9CA3AF);
+
   @override
   Widget build(BuildContext context) {
-    const enabledColor = Color(0xFF374151);
-    const disabledColor = Color(0xFFD1D5DB);
-
     return SafeArea(
       top: false,
       child: Container(
@@ -42,34 +43,34 @@ class ToolBar extends StatelessWidget {
               iconSize: 22,
               onPressed: canGoBack ? onBack : null,
               icon: const Icon(Icons.arrow_back_ios_new),
-              color: canGoBack ? enabledColor : disabledColor,
+              color: canGoBack ? _activeColor : _disabledColor,
               tooltip: '后退',
             ),
             IconButton(
               iconSize: 22,
               onPressed: canGoForward ? onForward : null,
               icon: const Icon(Icons.arrow_forward_ios),
-              color: canGoForward ? enabledColor : disabledColor,
+              color: canGoForward ? _activeColor : _disabledColor,
               tooltip: '前进',
             ),
             IconButton(
-              iconSize: 26,
-              onPressed: onNewTab,
-              icon: const Icon(Icons.add),
-              color: enabledColor,
-              tooltip: '新建标签页',
+              iconSize: 24,
+              onPressed: onShare,
+              icon: const Icon(Icons.ios_share),
+              color: _activeColor,
+              tooltip: '分享',
             ),
             IconButton(
               iconSize: 22,
               onPressed: onTabs,
-              icon: _TabCountIcon(count: tabCount, color: enabledColor),
+              icon: _TabCountIcon(count: tabCount, color: _activeColor),
               tooltip: '标签页',
             ),
             IconButton(
               iconSize: 22,
               onPressed: onMore,
               icon: const Icon(Icons.more_horiz),
-              color: enabledColor,
+              color: _activeColor,
               tooltip: '更多',
             ),
           ],

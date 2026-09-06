@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/db/database_helper.dart';
 import '../../core/services/adblock_service.dart';
@@ -37,6 +38,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TabManager _tabManager = TabManager();
   final Map<String, GlobalKey<WebViewPageState>> _webViewKeys = {};
+  String _lastActiveTabId = '';
 
   double _progress = 0;
   bool _canGoBack = false;
@@ -48,6 +50,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void initState() {
     super.initState();
     _tabManager.addListener(_onTabsChanged);
+    DownloadService.instance.lastCompleted.addListener(_onDownloadCompleted);
     unawaited(_initTabs());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DatabaseHelper.instance.initDefaultBookmarks();
@@ -130,6 +133,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void dispose() {
     _nativeSub?.cancel();
     _tabManager.removeListener(_onTabsChanged);
+    DownloadService.instance.lastCompleted.removeListener(_onDownloadCompleted);
     _tabManager.dispose();
     _addressController.dispose();
     super.dispose();
@@ -139,6 +143,11 @@ class _BrowserScreenState extends State<BrowserScreen> {
     final active = _tabManager.activeTab;
     if (active != null) {
       _addressController.text = active.url;
+      // 标签切换时补截图
+      if (active.id != _lastActiveTabId) {
+        _lastActiveTabId = active.id;
+        _refreshSnapshot();
+      }
     }
   }
 
@@ -218,6 +227,20 @@ class _BrowserScreenState extends State<BrowserScreen> {
         });
   }
 
+  /// 更多菜单项定义（id 用于排序持久化）。
+  List<Map<String, dynamic>> get _menuItems => [
+        {'id': 'bookmarks', 'icon': Icons.bookmark_border, 'label': '书签'},
+        {'id': 'history', 'icon': Icons.history, 'label': '历史记录'},
+        {'id': 'add_bookmark', 'icon': Icons.add, 'label': '添加到书签'},
+        {'id': 'translate', 'icon': Icons.translate, 'label': '翻译此页'},
+        {'id': 'reader', 'icon': Icons.menu_book_outlined, 'label': '阅读模式'},
+        {'id': 'save_offline', 'icon': Icons.download_outlined, 'label': '保存离线页面'},
+        {'id': 'offline_pages', 'icon': Icons.offline_pin_outlined, 'label': '离线页面'},
+        {'id': 'downloads', 'icon': Icons.file_download_outlined, 'label': '下载管理'},
+        {'id': 'cache', 'icon': Icons.cleaning_services_outlined, 'label': '缓存管理'},
+        {'id': 'settings', 'icon': Icons.settings_outlined, 'label': '设置'},
+      ];
+
   void _openMoreMenu() {
     FocusScope.of(context).unfocus();
     showModalBottomSheet<void>(
@@ -227,79 +250,24 @@ class _BrowserScreenState extends State<BrowserScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (sheetContext) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              _sheetItem(
-                icon: Icons.bookmark_border,
-                label: '书签',
-                onTap: () => _openBookmarks(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.history,
-                label: '历史记录',
-                onTap: () => _openHistory(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.add,
-                label: '添加到书签',
-                onTap: () => _addBookmark(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.translate,
-                label: '翻译此页',
-                onTap: () => _translatePageFromSheet(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.menu_book_outlined,
-                label: '阅读模式',
-                onTap: () => _openReader(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.download_outlined,
-                label: '保存离线页面',
-                onTap: () => _saveOffline(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.offline_pin_outlined,
-                label: '离线页面',
-                onTap: () => _openOfflinePages(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.file_download_outlined,
-                label: '下载管理',
-                onTap: () => _openDownloads(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.cleaning_services_outlined,
-                label: '缓存管理',
-                onTap: () => _openCacheManager(sheetContext),
-              ),
-              _sheetItem(
-                icon: Icons.settings_outlined,
-                label: '设置',
-                onTap: () => _openSettings(sheetContext),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
+      builder: (sheetContext) => _MoreMenuSheet(
+        items: _menuItems,
+        onTapItem: (id) {
+          Navigator.of(sheetContext).pop();
+          switch (id) {
+            case 'bookmarks': _openBookmarks(context);
+            case 'history': _openHistory(context);
+            case 'add_bookmark': _addBookmark(context);
+            case 'translate': _translatePageFromSheet(context);
+            case 'reader': _openReader(context);
+            case 'save_offline': _saveOffline(context);
+            case 'offline_pages': _openOfflinePages(context);
+            case 'downloads': _openDownloads(context);
+            case 'cache': _openCacheManager(context);
+            case 'settings': _openSettings(context);
+          }
+        },
       ),
-    );
-  }
-
-  Widget _sheetItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, size: 22, color: const Color(0xFF374151)),
-      title: Text(label, style: const TextStyle(fontSize: 15)),
-      onTap: onTap,
     );
   }
 
@@ -486,19 +454,86 @@ class _BrowserScreenState extends State<BrowserScreen> {
     }
   }
 
-  /// 新建空白标签页（about:blank）。
-  void _newBlankTab() {
-    if (!_tabManager.canAddMore) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('标签数量已达上限'),
-          duration: Duration(seconds: 1),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+  /// 下载完成弹窗队列。
+  final List<DownloadTaskInfo> _downloadQueue = [];
+  bool _downloadDialogShowing = false;
+
+  void _onDownloadCompleted() {
+    final task = DownloadService.instance.lastCompleted.value;
+    if (task == null) return;
+    _downloadQueue.add(task);
+    _processDownloadQueue();
+  }
+
+  Future<void> _processDownloadQueue() async {
+    if (_downloadDialogShowing || _downloadQueue.isEmpty) return;
+    _downloadDialogShowing = true;
+    final task = _downloadQueue.removeAt(0);
+    if (!mounted) {
+      _downloadDialogShowing = false;
+      _processDownloadQueue();
       return;
     }
-    _tabManager.addTab(url: 'about:blank');
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('下载完成'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              task.fileName ?? '文件',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DownloadService.formatSize(task.total),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+            ),
+          ],
+        ),
+        actions: [
+          if (task.filePath != null)
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                NativeBridge.previewFile(task.filePath!);
+              },
+              child: const Text('打开文件'),
+            ),
+          if (task.filePath != null)
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Share.shareXFiles([XFile(task.filePath!)]);
+              },
+              child: const Text('分享文件'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+    _downloadDialogShowing = false;
+    _processDownloadQueue();
+  }
+
+  /// 分享当前页面（调用 iOS 原生 UIActivityViewController）。
+  Future<void> _shareCurrentPage() async {
+    final active = _tabManager.activeTab;
+    if (active == null || active.url.isEmpty || active.url.startsWith('about:')) {
+      _showMessage('当前页面无法分享');
+      return;
+    }
+    await NativeBridge.shareUrl(
+      url: active.url,
+      title: active.title,
+    );
   }
 
   @override
@@ -590,7 +625,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
             canGoForward: _canGoForward,
             onBack: () => _currentWebView()?.goBack(),
             onForward: () => _currentWebView()?.goForward(),
-            onNewTab: _newBlankTab,
+            onShare: _shareCurrentPage,
             onTabs: _openTabSwitcher,
             onMore: _openMoreMenu,
             tabCount: _tabManager.count,
@@ -599,4 +634,136 @@ class _BrowserScreenState extends State<BrowserScreen> {
       ),
     );
   }
+}
+
+/// 更多菜单底部弹窗：支持重力感应开启时长按拖拽排序。
+class _MoreMenuSheet extends StatefulWidget {
+  const _MoreMenuSheet({required this.items, required this.onTapItem});
+
+  final List<Map<String, dynamic>> items;
+  final void Function(String id) onTapItem;
+
+  @override
+  State<_MoreMenuSheet> createState() => _MoreMenuSheetState();
+}
+
+class _MoreMenuSheetState extends State<_MoreMenuSheet> {
+  bool _gravityEnabled = false;
+  List<Map<String, dynamic>> _ordered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final enabled = await SettingsService.instance.isGravitySensorEnabled();
+    final order = await SettingsService.instance.getMenuOrder();
+    if (!mounted) return;
+    setState(() {
+      _gravityEnabled = enabled;
+      if (order.isNotEmpty) {
+        final map = {for (final e in widget.items) e['id'] as String: e};
+        _ordered = [
+          for (final id in order)
+            if (map.containsKey(id)) map[id]!,
+          for (final e in widget.items)
+            if (!order.contains(e['id'])) e,
+        ];
+      } else {
+        _ordered = List.from(widget.items);
+      }
+    });
+  }
+
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
+    final item = _ordered.removeAt(oldIndex);
+    _ordered.insert(newIndex, item);
+    NativeBridge.hapticFeedback(style: 'medium');
+    setState(() {});
+    await SettingsService.instance
+        .setMenuOrder(_ordered.map((e) => e['id'] as String).toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            if (_gravityEnabled)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '长按拖拽可调整顺序',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                  ),
+                ),
+              ),
+            Flexible(
+              child: _gravityEnabled
+                  ? ReorderableListView.builder(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: _ordered.length,
+                      itemBuilder: (context, index) {
+                        final item = _ordered[index];
+                        return _sheetItem(
+                          key: ValueKey(item['id']),
+                          icon: item['icon'] as IconData,
+                          label: item['label'] as String,
+                          onTap: () => widget.onTapItem(item['id'] as String),
+                          reorderable: true,
+                        );
+                      },
+                      onReorderItem: _onReorder,
+                    )
+                  : ListView(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      children: [
+                        for (final item in _ordered)
+                          _sheetItem(
+                            key: ValueKey(item['id']),
+                            icon: item['icon'] as IconData,
+                            label: item['label'] as String,
+                            onTap: () => widget.onTapItem(item['id'] as String),
+                          ),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// 更多菜单项（reorderable=true 时显示拖拽手柄）。
+Widget _sheetItem({
+  Key? key,
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+  bool reorderable = false,
+}) {
+  return ListTile(
+    key: key,
+    leading: Icon(icon, size: 22, color: const Color(0xFF374151)),
+    title: Text(label, style: const TextStyle(fontSize: 15)),
+    trailing: reorderable
+        ? const Icon(Icons.drag_handle, size: 20, color: Color(0xFFB0B7C3))
+        : null,
+    onTap: onTap,
+  );
 }

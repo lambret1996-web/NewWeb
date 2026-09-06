@@ -17,18 +17,22 @@ class DownloadTaskInfo {
     required this.url,
     required this.status,
     this.fileName,
+    this.filePath,
     this.received = 0,
     this.total = -1,
     this.message,
+    this.completedAt,
   });
 
   final String taskId;
   final String url;
   DownloadStatus status;
   String? fileName;
+  String? filePath;
   int received;
   int total;
   String? message;
+  DateTime? completedAt;
 
   double get progress {
     if (total <= 0) return 0;
@@ -38,11 +42,17 @@ class DownloadTaskInfo {
 
 /// 已下载文件条目。
 class DownloadedFile {
-  const DownloadedFile({required this.path, required this.name, required this.size});
+  const DownloadedFile({
+    required this.path,
+    required this.name,
+    required this.size,
+    required this.completedAt,
+  });
 
   final String path;
   final String name;
   final int size;
+  final DateTime completedAt;
 }
 
 /// 下载服务：转发原生下载事件，维护任务状态（进程内存）。
@@ -53,6 +63,9 @@ class DownloadService {
 
   final Map<String, DownloadTaskInfo> _tasks = {};
   final ValueNotifier<int> _version = ValueNotifier(0);
+
+  /// 最近完成的下载（UI 监听弹出完成提示）。
+  final ValueNotifier<DownloadTaskInfo?> lastCompleted = ValueNotifier(null);
   StreamSubscription<Map<String, dynamic>>? _sub;
   bool _listening = false;
 
@@ -99,7 +112,20 @@ class DownloadService {
         if (task != null) {
           task.status = DownloadStatus.completed;
           task.fileName = e['name'] as String? ?? task.fileName;
+          task.filePath = e['path'] as String?;
           task.received = task.total;
+          task.completedAt = DateTime.now();
+          // 从文件读取实际大小
+          if (task.filePath != null) {
+            try {
+              final f = File(task.filePath!);
+              if (f.existsSync()) {
+                task.total = f.lengthSync();
+                task.received = task.total;
+              }
+            } catch (_) {}
+          }
+          lastCompleted.value = task;
         }
       case 'download_paused':
         _tasks[taskId]?.status = DownloadStatus.paused;
@@ -161,9 +187,10 @@ class DownloadService {
         path: f.path,
         name: p.basename(f.path),
         size: stat.size,
+        completedAt: stat.modified,
       ));
     }
-    result.sort((a, b) => b.size.compareTo(a.size));
+    result.sort((a, b) => b.completedAt.compareTo(a.completedAt));
     return result;
   }
 

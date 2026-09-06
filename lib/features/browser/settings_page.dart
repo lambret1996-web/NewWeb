@@ -22,6 +22,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _hasTencent = false;
   String _translateMode = 'auto';
   List<String> _autoTranslateDomains = [];
+  bool _gravityEnabled = false;
 
   @override
   void initState() {
@@ -37,6 +38,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final hasTencent = (await settings.getTencentSecretId()) != null;
     final mode = await settings.getTranslateMode();
     final domains = await settings.getAutoTranslateDomains();
+    final gravity = await settings.isGravitySensorEnabled();
     if (!mounted) return;
     setState(() {
       _searchEngine = engine;
@@ -45,6 +47,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _hasTencent = hasTencent;
       _translateMode = mode;
       _autoTranslateDomains = domains;
+      _gravityEnabled = gravity;
     });
   }
 
@@ -482,6 +485,25 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
           _group(
+            title: '通用',
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.screen_rotation_alt,
+                    size: 22, color: Color(0xFF374151)),
+                title: const Text('重力感应', style: TextStyle(fontSize: 15)),
+                subtitle: const Text(
+                  '开启后更多菜单支持长按拖拽排序',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                ),
+                value: _gravityEnabled,
+                onChanged: (value) async {
+                  setState(() => _gravityEnabled = value);
+                  await SettingsService.instance.setGravitySensor(value);
+                },
+              ),
+            ],
+          ),
+          _group(
             title: '存储',
             children: [
               _tile(
@@ -511,7 +533,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Icon(Icons.info_outline, size: 22, color: Color(0xFF374151)),
                 title: Text('未来浏览器', style: TextStyle(fontSize: 15)),
                 trailing: Text(
-                  '版本 1.0.9',
+                  '版本 1.0.10',
                   style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
                 ),
               ),
