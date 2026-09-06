@@ -83,6 +83,10 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
     case "hapticFeedback":
       hapticFeedback(style: args["style"] as? String ?? "medium")
       result(nil)
+    case "setDarkMode":
+      let dark = args["dark"] as? Bool ?? false
+      setWebViewDarkMode(dark: dark)
+      result(nil)
     case "clearWebDataTypes":
       let types = args["types"] as? [String] ?? []
       clearWebDataTypes(types, result: result)
@@ -285,6 +289,27 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
         generator = UIImpactFeedbackGenerator(style: .medium)
       }
       generator.impactOccurred()
+    }
+  }
+
+  /// 设置所有 WKWebView 的深色模式（overrideUserInterfaceStyle）。
+  private func setWebViewDarkMode(dark: Bool) {
+    DispatchQueue.main.async {
+      for scene in UIApplication.shared.connectedScenes {
+        guard let windowScene = scene as? UIWindowScene else { continue }
+        for window in windowScene.windows {
+          self.setDarkMode(in: window, dark: dark)
+        }
+      }
+    }
+  }
+
+  private func setDarkMode(in view: UIView, dark: Bool) {
+    if let wv = view as? WKWebView {
+      wv.overrideUserInterfaceStyle = dark ? .dark : .light
+    }
+    for sub in view.subviews {
+      setDarkMode(in: sub, dark: dark)
     }
   }
 

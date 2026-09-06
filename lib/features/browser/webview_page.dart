@@ -13,6 +13,7 @@ import '../../core/services/adblock_service.dart';
 import '../../core/services/download_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/services/translate_service.dart';
+import 'new_tab_page.dart';
 
 /// WebView 容器页：封装加载、进度、历史状态、JS Bridge 与功能脚本注入。
 /// 支持 LRU 保活：active=false 时销毁 WKWebView 释放内存，显示快照占位；
@@ -35,6 +36,7 @@ class WebViewPage extends StatefulWidget {
     this.snapshotPath,
     this.initialScrollY = 0,
     this.onScrollSaved,
+    this.onLoadUrl,
   });
 
   final ValueChanged<double> onProgress;
@@ -68,6 +70,9 @@ class WebViewPage extends StatefulWidget {
   /// 离开标签前保存滚动位置回调。
   final ValueChanged<double>? onScrollSaved;
 
+  /// 新标签页（about:blank）中用户触发加载 URL 时回调。
+  final ValueChanged<String>? onLoadUrl;
+
   @override
   State<WebViewPage> createState() => WebViewPageState();
 }
@@ -77,10 +82,12 @@ class WebViewPageState extends State<WebViewPage> {
   final JsBridge _bridge = JsBridge();
   bool _restoringScroll = false;
 
+  bool get _isBlank => widget.initialUrl == 'about:blank';
+
   @override
   void initState() {
     super.initState();
-    if (widget.active) {
+    if (widget.active && !_isBlank) {
       _createController();
     }
   }
@@ -93,6 +100,12 @@ class WebViewPageState extends State<WebViewPage> {
       unawaited(_suspend());
     } else if (!oldWidget.active && widget.active) {
       // 回到前台：重建 WebView
+      if (!_isBlank) _createController();
+    }
+    // about:blank → 真实 URL：创建 WebView 加载
+    if (oldWidget.initialUrl == 'about:blank' &&
+        widget.initialUrl != 'about:blank' &&
+        _controller == null) {
       _createController();
     }
   }
@@ -430,6 +443,10 @@ class WebViewPageState extends State<WebViewPage> {
     final c = _controller;
     if (c != null) {
       return WebViewWidget(controller: c);
+    }
+    // about:blank 新标签页
+    if (_isBlank && widget.onLoadUrl != null) {
+      return NewTabPage(onLoadUrl: widget.onLoadUrl!);
     }
     // inactive 占位：优先内存快照，其次磁盘快照，最后空白占位
     if (widget.snapshotBytes != null) {

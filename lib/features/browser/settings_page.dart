@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app.dart';
 import '../../core/services/adblock_custom_service.dart';
-import '../../core/services/settings_service.dart';
 import '../../native/native_bridge.dart';
+import '../../core/services/settings_service.dart';
 import 'adblock_custom_page.dart';
 import 'cache_manager_page.dart';
 
@@ -23,6 +24,9 @@ class _SettingsPageState extends State<SettingsPage> {
   String _translateMode = 'auto';
   List<String> _autoTranslateDomains = [];
   bool _gravityEnabled = false;
+  bool _darkMode = false;
+  int _builtinRules = 0;
+  int _customRules = 0;
 
   @override
   void initState() {
@@ -39,6 +43,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final mode = await settings.getTranslateMode();
     final domains = await settings.getAutoTranslateDomains();
     final gravity = await settings.isGravitySensorEnabled();
+    final dark = await settings.isDarkModeEnabled();
+    // 统计广告拦截规则数量
+    final customSvc = AdblockCustomService.instance;
+    await customSvc.ensureLoaded();
+    final customCount = customSvc.blockDomains.length +
+        customSvc.hiddenSelectors.length +
+        customSvc.whitelist.length +
+        customSvc.advancedRules.length;
     if (!mounted) return;
     setState(() {
       _searchEngine = engine;
@@ -48,6 +60,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _translateMode = mode;
       _autoTranslateDomains = domains;
       _gravityEnabled = gravity;
+      _darkMode = dark;
+      _customRules = customCount;
+      _builtinRules = 5; // 内置 adblock_rules.json 规则数
     });
   }
 
@@ -402,12 +417,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => Navigator.of(context)
                     .push(MaterialPageRoute(builder: (_) => const AdblockCustomPage())),
               ),
-              const ListTile(
+              ListTile(
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                 title: Text(
-                  '拦截域名 / 隐藏元素 / 豁免站点 / 高级 JSON 规则',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                  '内置 $_builtinRules 条 + 自定义 $_customRules 条规则',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
                 ),
               ),
             ],
@@ -501,6 +516,22 @@ class _SettingsPageState extends State<SettingsPage> {
                   await SettingsService.instance.setGravitySensor(value);
                 },
               ),
+              SwitchListTile(
+                secondary: const Icon(Icons.dark_mode_outlined,
+                    size: 22, color: Color(0xFF374151)),
+                title: const Text('深色模式', style: TextStyle(fontSize: 15)),
+                subtitle: const Text(
+                  '全局深色界面，网页跟随系统深色渲染',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                ),
+                value: _darkMode,
+                onChanged: (value) async {
+                  setState(() => _darkMode = value);
+                  await SettingsService.instance.setDarkMode(value);
+                  darkModeNotifier.value = value;
+                  await NativeBridge.setWebViewDarkMode(value);
+                },
+              ),
             ],
           ),
           _group(
@@ -533,7 +564,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Icon(Icons.info_outline, size: 22, color: Color(0xFF374151)),
                 title: Text('未来浏览器', style: TextStyle(fontSize: 15)),
                 trailing: Text(
-                  '版本 1.0.10',
+                  '版本 1.0.11',
                   style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
                 ),
               ),

@@ -11,6 +11,7 @@ import '../../core/services/download_service.dart';
 import '../../core/services/offline_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../native/native_bridge.dart';
+import '../../app.dart';
 import 'bookmarks_page.dart';
 import 'cache_manager_page.dart';
 import 'download_page.dart';
@@ -51,6 +52,10 @@ class _BrowserScreenState extends State<BrowserScreen> {
     super.initState();
     _tabManager.addListener(_onTabsChanged);
     DownloadService.instance.lastCompleted.addListener(_onDownloadCompleted);
+    darkModeNotifier.addListener(_onDarkModeChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NativeBridge.setWebViewDarkMode(darkModeNotifier.value);
+    });
     unawaited(_initTabs());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DatabaseHelper.instance.initDefaultBookmarks();
@@ -134,6 +139,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
     _nativeSub?.cancel();
     _tabManager.removeListener(_onTabsChanged);
     DownloadService.instance.lastCompleted.removeListener(_onDownloadCompleted);
+    darkModeNotifier.removeListener(_onDarkModeChanged);
     _tabManager.dispose();
     _addressController.dispose();
     super.dispose();
@@ -454,6 +460,10 @@ class _BrowserScreenState extends State<BrowserScreen> {
     }
   }
 
+  void _onDarkModeChanged() {
+    NativeBridge.setWebViewDarkMode(darkModeNotifier.value);
+  }
+
   /// 下载完成弹窗队列。
   final List<DownloadTaskInfo> _downloadQueue = [];
   bool _downloadDialogShowing = false;
@@ -595,6 +605,10 @@ class _BrowserScreenState extends State<BrowserScreen> {
                         onScrollSaved: (dy) {
                           _tabManager.updateTab(tabId, scrollY: dy);
                         },
+                        onLoadUrl: (url) {
+                          _tabManager.updateTab(tabId, url: url);
+                          _currentWebView()?.load(url);
+                        },
                         onProgress: _onProgress,
                         onUrlChanged: (url) {
                           if (url != null) {
@@ -649,6 +663,7 @@ class _MoreMenuSheet extends StatefulWidget {
 
 class _MoreMenuSheetState extends State<_MoreMenuSheet> {
   bool _gravityEnabled = false;
+  bool _adBlockEnabled = false;
   List<Map<String, dynamic>> _ordered = [];
 
   @override
@@ -659,10 +674,12 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> {
 
   Future<void> _init() async {
     final enabled = await SettingsService.instance.isGravitySensorEnabled();
+    final adBlock = await SettingsService.instance.isAdBlockEnabled();
     final order = await SettingsService.instance.getMenuOrder();
     if (!mounted) return;
     setState(() {
       _gravityEnabled = enabled;
+      _adBlockEnabled = adBlock;
       if (order.isNotEmpty) {
         final map = {for (final e in widget.items) e['id'] as String: e};
         _ordered = [
@@ -697,6 +714,40 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
+            // 广告拦截状态条
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _adBlockEnabled
+                    ? const Color(0xFFE8F5E9)
+                    : const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _adBlockEnabled
+                        ? Icons.verified_outlined
+                        : Icons.info_outline,
+                    size: 16,
+                    color: _adBlockEnabled
+                        ? const Color(0xFF2E7D32)
+                        : const Color(0xFFE65100),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _adBlockEnabled ? '广告拦截已开启' : '广告拦截未开启',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _adBlockEnabled
+                          ? const Color(0xFF2E7D32)
+                          : const Color(0xFFE65100),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             if (_gravityEnabled)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),

@@ -16,6 +16,7 @@ class SettingsService {
   static const String kAdblockWhitelist = 'adblock_whitelist';
   static const String kGravitySensor = 'gravity_sensor';
   static const String kMenuOrder = 'menu_order';
+  static const String kDarkMode = 'dark_mode';
 
   static const Map<String, String> searchEngines = {
     'baidu': '百度',
@@ -166,5 +167,17 @@ class SettingsService {
   Future<void> setMenuOrder(List<String> order) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(kMenuOrder, order);
+  }
+
+  // ---- 深色模式 ----
+
+  Future<bool> isDarkModeEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(kDarkMode) ?? false;
+  }
+
+  Future<void> setDarkMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kDarkMode, value);
   }
 }

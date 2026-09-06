@@ -95,6 +95,11 @@ class NativeBridge {
     await invoke('previewFile', {'path': path});
   }
 
+  /// 设置 WebView 深色模式（overrideUserInterfaceStyle）。
+  static Future<void> setWebViewDarkMode(bool dark) async {
+    await invoke('setDarkMode', {'dark': dark});
+  }
+
   /// 触感反馈（UIImpactFeedbackGenerator）。style: light/medium/heavy/success/warning/error。
   static Future<void> hapticFeedback({String style = 'medium'}) async {
     await invoke('hapticFeedback', {'style': style});
