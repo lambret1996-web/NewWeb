@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/edge_back_gesture.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 /// 阅读器模式：以原生 WebView 渲染提取的正文，支持字号调节。
@@ -79,7 +80,7 @@ ${widget.html}
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return EdgeBackGesture(child: Scaffold(
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -103,6 +104,6 @@ ${widget.html}
         ],
       ),
       body: WebViewWidget(controller: _controller),
-    );
+    ));
   }
 }

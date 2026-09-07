@@ -57,6 +57,25 @@ class WebInjections {
 })();
 ''';
 
+  /// 网页强制深色：注入/移除反色 CSS（媒体元素二次反色还原）。
+  /// dark=true 注入，false 移除。完全由 App 控制，不依赖系统 color-scheme。
+  static String webDarkScript(bool dark) => '''
+(function() {
+  var id = '__NEWWEB_DARK_STYLE__';
+  var old = document.getElementById(id);
+  if (!$dark) { if (old) old.parentNode.removeChild(old); return; }
+  if (old) return;
+  var css = ''
+    + 'html{background-color:#0f1115 !important;filter:invert(100%) hue-rotate(180deg) !important;}'
+    + 'img,picture,video,canvas,svg,iframe,[style*="background-image"],input[type=image]{filter:invert(100%) hue-rotate(180deg) !important;}'
+    + 'body{background-color:#0f1115 !important;}';
+  var style = document.createElement('style');
+  style.id = id;
+  style.type = 'text/css';
+  style.appendChild(document.createTextNode(css));
+  (document.head || document.documentElement).appendChild(style);
+})();''';
+
   /// 整页翻译脚本：提取可见文本节点，分批经 JS Bridge 翻译并替换，可恢复原文。
   /// Dart 侧逐批回传结果：window.__NEWWEB_PAGE_TRANSLATE_APPLY__(id, results)。
   static String pageTranslateScript() => r'''

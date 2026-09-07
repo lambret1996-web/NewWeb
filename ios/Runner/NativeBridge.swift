@@ -292,7 +292,9 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
     }
   }
 
-  /// 设置所有 WKWebView 的深色模式（overrideUserInterfaceStyle）。
+  /// 设置所有 WKWebView 的底色（防止深色模式加载间隙/弹性区域白闪）。
+  /// 注意：不使用 overrideUserInterfaceStyle（会导致部分网页整页变黑），
+  /// 网页内容深色由 Dart 层注入 CSS 完成。
   private func setWebViewDarkMode(dark: Bool) {
     DispatchQueue.main.async {
       for scene in UIApplication.shared.connectedScenes {
@@ -306,7 +308,10 @@ public class NativeBridgePlugin: NSObject, FlutterPlugin, QLPreviewControllerDat
 
   private func setDarkMode(in view: UIView, dark: Bool) {
     if let wv = view as? WKWebView {
-      wv.overrideUserInterfaceStyle = dark ? .dark : .light
+      let bg = dark ? UIColor(red: 15/255.0, green: 17/255.0, blue: 21/255.0, alpha: 1) : UIColor(red: 245/255.0, green: 246/255.0, blue: 248/255.0, alpha: 1)
+      wv.isOpaque = false
+      wv.backgroundColor = bg
+      wv.scrollView.backgroundColor = bg
     }
     for sub in view.subviews {
       setDarkMode(in: sub, dark: dark)

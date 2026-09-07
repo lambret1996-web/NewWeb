@@ -12,7 +12,6 @@ import '../../core/services/download_service.dart';
 import '../../core/services/offline_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../native/native_bridge.dart';
-import '../../app.dart';
 import 'bookmarks_page.dart';
 import 'cache_manager_page.dart';
 import 'download_page.dart';
@@ -53,10 +52,6 @@ class _BrowserScreenState extends State<BrowserScreen> {
     super.initState();
     _tabManager.addListener(_onTabsChanged);
     DownloadService.instance.lastCompleted.addListener(_onDownloadCompleted);
-    darkModeNotifier.addListener(_onDarkModeChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      NativeBridge.setWebViewDarkMode(darkModeNotifier.value);
-    });
     unawaited(_initTabs());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DatabaseHelper.instance.initDefaultBookmarks();
@@ -140,7 +135,6 @@ class _BrowserScreenState extends State<BrowserScreen> {
     _nativeSub?.cancel();
     _tabManager.removeListener(_onTabsChanged);
     DownloadService.instance.lastCompleted.removeListener(_onDownloadCompleted);
-    darkModeNotifier.removeListener(_onDarkModeChanged);
     _tabManager.dispose();
     _addressController.dispose();
     super.dispose();
@@ -459,10 +453,6 @@ class _BrowserScreenState extends State<BrowserScreen> {
     } catch (_) {
       _tabManager.updateSnapshot(active.id, bytes: shot);
     }
-  }
-
-  void _onDarkModeChanged() {
-    NativeBridge.setWebViewDarkMode(darkModeNotifier.value);
   }
 
   /// 下载完成弹窗队列。

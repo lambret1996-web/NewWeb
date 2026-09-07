@@ -128,6 +128,7 @@
     "receive": "接收",
     "welcome": "欢迎",
     "hello": "你好",
+    "world": "世界",
     "goodbye": "再见",
     "thanks": "谢谢",
     "please": "请",
@@ -4389,9 +4390,7 @@
     "version:": "版本：",
     "protip!": "专业提示！",
     "preset:": "预设：",
-    "show:": "显示："
-  },
-  "phrases": {
+    "show:": "显示：",
     "fifa women's world cup all-time most knockout stage matches without a penalty shootout": "女足世界杯淘汰赛无点球大战场次最多",
     "fifa women's world cup all-time most group stage matches without a penalty shootout": "女足世界杯小组赛无点球大战场次最多",
     "fifa women's world cup all-time most knockout stage matches with a penalty shootout": "女足世界杯淘汰赛有点球大战场次最多",
@@ -20998,4 +20997,4 @@
     "to a": "为",
     "as a": "因",
     "rt t": "实时文本"
-  }
+}

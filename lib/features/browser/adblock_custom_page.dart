@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/edge_back_gesture.dart';
 
 import '../../core/services/adblock_custom_service.dart';
 import '../../core/services/adblock_service.dart';
@@ -117,12 +118,10 @@ class _AdblockCustomPageState extends State<AdblockCustomPage> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
+    return EdgeBackGesture(child: DefaultTabController(
       length: 4,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F6F8),
         appBar: AppBar(
-          backgroundColor: const Color(0xFFF5F6F8),
           elevation: 0,
           scrolledUnderElevation: 0,
           title: const Text(
@@ -152,7 +151,7 @@ class _AdblockCustomPageState extends State<AdblockCustomPage> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _ruleList(List<CustomRuleItem> list,

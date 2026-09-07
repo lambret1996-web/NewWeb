@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/edge_back_gesture.dart';
 
 import '../../core/db/database_helper.dart';
 import '../../core/models/bookmark.dart';
@@ -140,10 +141,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
+    return EdgeBackGesture(child: Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F6F8),
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
@@ -196,7 +195,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     );
                   },
                 ),
-    );
+    ));
   }
 }
 

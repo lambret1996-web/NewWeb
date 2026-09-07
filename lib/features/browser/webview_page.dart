@@ -89,9 +89,36 @@ class WebViewPageState extends State<WebViewPage> {
   @override
   void initState() {
     super.initState();
+    darkModeNotifier.addListener(_onDarkModeChanged);
     if (widget.active && !_isBlank) {
       _createController();
     }
+  }
+
+  @override
+  void dispose() {
+    darkModeNotifier.removeListener(_onDarkModeChanged);
+    super.dispose();
+  }
+
+  /// 深色模式切换：对当前 WebView 即时应用/移除网页深色 CSS。
+  void _onDarkModeChanged() {
+    _applyWebDark();
+  }
+
+  /// 按当前全局深色状态，向网页注入或移除强制深色 CSS。
+  Future<void> _applyWebDark() async {
+    final c = _controller;
+    if (c == null) return;
+    final dark = darkModeNotifier.value;
+    try {
+      await c.runJavaScript(WebInjections.webDarkScript(dark));
+      await c.setBackgroundColor(
+        dark ? const Color(0xFF0F1115) : const Color(0xFFF5F6F8),
+      );
+    } catch (_) {}
+    // 原生 WKWebView/scrollView 底色，防加载间隙与弹性区域白闪
+    unawaited(NativeBridge.setWebViewDarkMode(dark));
   }
 
   @override
@@ -142,7 +169,13 @@ class WebViewPageState extends State<WebViewPage> {
         'Mobile/15E148 Safari/604.1 ${AppConfig.userAgentSuffix}',
       ),
     );
-    unawaited(controller.setBackgroundColor(const Color(0xFFF5F6F8)));
+    unawaited(
+      controller.setBackgroundColor(
+        darkModeNotifier.value
+            ? const Color(0xFF0F1115)
+            : const Color(0xFFF5F6F8),
+      ),
+    );
     unawaited(
       controller.addJavaScriptChannel(
         JsBridge.channelName,
@@ -163,6 +196,7 @@ class WebViewPageState extends State<WebViewPage> {
           onPageFinished: (String url) async {
             _injectFeatureScripts();
             _refreshHistoryState();
+            unawaited(_applyWebDark());
             widget.onPageFinished?.call(url);
             final title = await controller.getTitle();
             if (title != null && title.isNotEmpty) {
@@ -208,9 +242,7 @@ class WebViewPageState extends State<WebViewPage> {
     );
     // 新建/重建 WebView 后同步当前深色模式（覆盖休眠恢复场景）
     unawaited(
-      Future.delayed(const Duration(milliseconds: 120), () {
-        NativeBridge.setWebViewDarkMode(darkModeNotifier.value);
-      }),
+      Future.delayed(const Duration(milliseconds: 120), _applyWebDark),
     );
   }
 

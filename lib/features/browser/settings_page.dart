@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'widgets/edge_back_gesture.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -359,10 +360,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final engineName = SettingsService.searchEngines[_searchEngine] ?? '百度';
     final modeName = SettingsService.translateModes[_translateMode] ?? '自动';
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
+    return EdgeBackGesture(child: Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F6F8),
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
@@ -548,7 +547,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Icon(Icons.info_outline, size: 22, color: Color(0xFF374151)),
                 title: Text('未来浏览器', style: TextStyle(fontSize: 15)),
                 trailing: Text(
-                  '版本 1.0.12',
+                  '版本 1.0.13',
                   style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
                 ),
               ),
@@ -557,7 +556,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
         ],
       ),
-    );
+    ));
   }
 
   Widget _group({required String title, required List<Widget> children}) {

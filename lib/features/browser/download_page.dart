@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/edge_back_gesture.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/services/download_service.dart';
@@ -59,10 +60,8 @@ class _DownloadPageState extends State<DownloadPage> {
   @override
   Widget build(BuildContext context) {
     final tasks = DownloadService.instance.activeTasks;
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
+    return EdgeBackGesture(child: Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F6F8),
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
@@ -96,7 +95,7 @@ class _DownloadPageState extends State<DownloadPage> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   /// 手动输入链接下载（兜底：无文件后缀的下载链接 / 直接粘贴链接）。

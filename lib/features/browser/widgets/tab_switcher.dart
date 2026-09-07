@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'edge_back_gesture.dart';
 
 import 'package:flutter/material.dart';
 
@@ -122,7 +123,7 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return EdgeBackGesture(child: Scaffold(
       appBar: _selectMode ? _buildSelectAppBar() : _buildNormalAppBar(),
       body: widget.manager.tabs.isEmpty
           ? const Center(
@@ -167,7 +168,7 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
               },
             ),
       bottomNavigationBar: _selectMode ? _buildBatchBar() : _buildBottomBar(),
-    );
+    ));
   }
 
   PreferredSizeWidget _buildNormalAppBar() {
