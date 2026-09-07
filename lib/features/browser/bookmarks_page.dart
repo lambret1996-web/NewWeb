@@ -57,7 +57,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
   void _showActionMenu(Bookmark bookmark) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),

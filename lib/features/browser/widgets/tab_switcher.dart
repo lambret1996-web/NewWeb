@@ -89,7 +89,7 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
   void _showModifyMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -123,7 +123,6 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
       appBar: _selectMode ? _buildSelectAppBar() : _buildNormalAppBar(),
       body: widget.manager.tabs.isEmpty
           ? const Center(
@@ -173,7 +172,6 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
 
   PreferredSizeWidget _buildNormalAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFF5F6F8),
       elevation: 0,
       scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
@@ -187,7 +185,6 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
 
   PreferredSizeWidget _buildSelectAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFF5F6F8),
       elevation: 0,
       scrolledUnderElevation: 0,
       leading: TextButton(
@@ -220,18 +217,23 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
       top: false,
       child: Container(
         height: 64,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
         ),
         child: Row(
           children: [
             Expanded(
               child: TextButton(
                 onPressed: _showModifyMenu,
-                child: const Text(
+                child: Text(
                   '修改',
-                  style: TextStyle(fontSize: 16, color: Color(0xFF374151)),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : const Color(0xFF374151),
+                  ),
                 ),
               ),
             ),
@@ -269,8 +271,8 @@ class _TabSwitcherPageState extends State<TabSwitcherPage> {
       child: Container(
         height: 64,
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+          color: Theme.of(context).cardColor,
+          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
           boxShadow: hasSelection
               ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]
               : null,
@@ -347,9 +349,10 @@ class _TabCard extends StatelessWidget {
     final borderColor =
         selected ? const Color(0xFF3B82F6) : (active ? const Color(0xFF3B82F6) : Colors.transparent);
     final borderWidth = (selected || active) ? 2.5 : 0.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -370,7 +373,7 @@ class _TabCard extends StatelessWidget {
                       Positioned.fill(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: _buildSnapshot(),
+                          child: _buildSnapshot(context),
                         ),
                       ),
                       // 选择模式：右上角蓝色圆圈
@@ -426,10 +429,10 @@ class _TabCard extends StatelessWidget {
                   tab.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
+                    color: isDark ? Colors.white : const Color(0xFF1F2937),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -448,7 +451,8 @@ class _TabCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSnapshot() {
+  Widget _buildSnapshot(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // 优先读磁盘快照，其次内存快照，最后占位
     if (tab.snapshotPath != null &&
         File(tab.snapshotPath!).existsSync()) {
@@ -468,7 +472,7 @@ class _TabCard extends StatelessWidget {
       );
     }
     return Container(
-      color: const Color(0xFFEFF4FF),
+      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFEFF4FF),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

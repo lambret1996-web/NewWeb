@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -23,7 +24,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _hasTencent = false;
   String _translateMode = 'auto';
   List<String> _autoTranslateDomains = [];
-  bool _gravityEnabled = false;
   bool _darkMode = false;
   int _builtinRules = 0;
   int _customRules = 0;
@@ -42,7 +42,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final hasTencent = (await settings.getTencentSecretId()) != null;
     final mode = await settings.getTranslateMode();
     final domains = await settings.getAutoTranslateDomains();
-    final gravity = await settings.isGravitySensorEnabled();
     final dark = await settings.isDarkModeEnabled();
     // 统计广告拦截规则数量
     final customSvc = AdblockCustomService.instance;
@@ -59,7 +58,6 @@ class _SettingsPageState extends State<SettingsPage> {
       _hasTencent = hasTencent;
       _translateMode = mode;
       _autoTranslateDomains = domains;
-      _gravityEnabled = gravity;
       _darkMode = dark;
       _customRules = customCount;
       _builtinRules = 5; // 内置 adblock_rules.json 规则数
@@ -69,7 +67,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _pickSearchEngine() async {
     final selected = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -110,7 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _pickTranslateMode() async {
     final selected = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -300,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     final share = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -415,7 +413,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                 ),
                 onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const AdblockCustomPage())),
+                    .push(CupertinoPageRoute(builder: (_) => const AdblockCustomPage())),
               ),
               ListTile(
                 contentPadding:
@@ -503,20 +501,6 @@ class _SettingsPageState extends State<SettingsPage> {
             title: '通用',
             children: [
               SwitchListTile(
-                secondary: const Icon(Icons.screen_rotation_alt,
-                    size: 22, color: Color(0xFF374151)),
-                title: const Text('重力感应', style: TextStyle(fontSize: 15)),
-                subtitle: const Text(
-                  '开启后更多菜单支持长按拖拽排序',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
-                ),
-                value: _gravityEnabled,
-                onChanged: (value) async {
-                  setState(() => _gravityEnabled = value);
-                  await SettingsService.instance.setGravitySensor(value);
-                },
-              ),
-              SwitchListTile(
                 secondary: const Icon(Icons.dark_mode_outlined,
                     size: 22, color: Color(0xFF374151)),
                 title: const Text('深色模式', style: TextStyle(fontSize: 15)),
@@ -541,7 +525,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.cleaning_services_outlined,
                 title: '缓存管理（四级）',
                 onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const CacheManagerPage())),
+                    .push(CupertinoPageRoute(builder: (_) => const CacheManagerPage())),
               ),
             ],
           ),
@@ -564,7 +548,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Icon(Icons.info_outline, size: 22, color: Color(0xFF374151)),
                 title: Text('未来浏览器', style: TextStyle(fontSize: 15)),
                 trailing: Text(
-                  '版本 1.0.11',
+                  '版本 1.0.12',
                   style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
                 ),
               ),
@@ -594,7 +578,7 @@ class _SettingsPageState extends State<SettingsPage> {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(children: children),
@@ -610,9 +594,20 @@ class _SettingsPageState extends State<SettingsPage> {
     Widget? trailing,
     VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, size: 22, color: const Color(0xFF374151)),
-      title: Text(title, style: const TextStyle(fontSize: 15)),
+      leading: Icon(
+        icon,
+        size: 22,
+        color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          color: isDark ? Colors.white : const Color(0xFF1F2937),
+        ),
+      ),
       subtitle: subtitle == null
           ? null
           : Text(subtitle,

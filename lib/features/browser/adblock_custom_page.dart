@@ -164,7 +164,7 @@ class _AdblockCustomPageState extends State<AdblockCustomPage> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -220,7 +220,7 @@ class _AdblockCustomPageState extends State<AdblockCustomPage> {
                       margin: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: ListTile(
@@ -270,7 +270,7 @@ class _AdblockCustomPageState extends State<AdblockCustomPage> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -315,7 +315,7 @@ class _AdblockCustomPageState extends State<AdblockCustomPage> {
                       margin: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: ListTile(

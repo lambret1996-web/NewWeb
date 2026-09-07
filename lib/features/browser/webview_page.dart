@@ -13,6 +13,8 @@ import '../../core/services/adblock_service.dart';
 import '../../core/services/download_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/services/translate_service.dart';
+import '../../app.dart';
+import '../../native/native_bridge.dart';
 import 'new_tab_page.dart';
 
 /// WebView 容器页：封装加载、进度、历史状态、JS Bridge 与功能脚本注入。
@@ -202,6 +204,12 @@ class WebViewPageState extends State<WebViewPage> {
     unawaited(
       Future.delayed(const Duration(milliseconds: 500), () {
         return AdBlockService.instance.ensureInjected();
+      }),
+    );
+    // 新建/重建 WebView 后同步当前深色模式（覆盖休眠恢复场景）
+    unawaited(
+      Future.delayed(const Duration(milliseconds: 120), () {
+        NativeBridge.setWebViewDarkMode(darkModeNotifier.value);
       }),
     );
   }

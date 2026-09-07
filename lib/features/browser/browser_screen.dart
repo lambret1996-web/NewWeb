@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -178,7 +179,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
     FocusScope.of(context).unfocus();
     Navigator.of(context)
         .push<String>(
-          MaterialPageRoute(
+          CupertinoPageRoute(
             builder: (_) => TabSwitcherPage(
               manager: _tabManager,
               onNewTab: () {
@@ -252,7 +253,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -280,7 +281,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void _openBookmarks(BuildContext sheetContext) {
     Navigator.of(sheetContext).pop();
     Navigator.of(context)
-        .push<String>(MaterialPageRoute(builder: (_) => const BookmarksPage()))
+        .push<String>(CupertinoPageRoute(builder: (_) => const BookmarksPage()))
         .then((url) {
       if (url != null && mounted) {
         _currentWebView()?.load(url);
@@ -291,7 +292,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void _openHistory(BuildContext sheetContext) {
     Navigator.of(sheetContext).pop();
     Navigator.of(context)
-        .push<String>(MaterialPageRoute(builder: (_) => const HistoryPage()))
+        .push<String>(CupertinoPageRoute(builder: (_) => const HistoryPage()))
         .then((url) {
       if (url != null && mounted) {
         _currentWebView()?.load(url);
@@ -352,7 +353,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void _openOfflinePages(BuildContext sheetContext) {
     Navigator.of(sheetContext).pop();
     Navigator.of(context)
-        .push<String>(MaterialPageRoute(builder: (_) => const OfflinePagesPage()))
+        .push<String>(CupertinoPageRoute(builder: (_) => const OfflinePagesPage()))
         .then((path) {
       if (path != null && mounted) {
         _currentWebView()?.loadFile(path);
@@ -363,7 +364,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void _openSettings(BuildContext sheetContext) {
     Navigator.of(sheetContext).pop();
     Navigator.of(context)
-        .push<void>(MaterialPageRoute(builder: (_) => const SettingsPage()))
+        .push<void>(CupertinoPageRoute(builder: (_) => const SettingsPage()))
         .then((_) => _loadIncognito());
   }
 
@@ -401,7 +402,7 @@ class _BrowserScreenState extends State<BrowserScreen> {
         return;
       }
       Navigator.of(context).push(
-        MaterialPageRoute(
+        CupertinoPageRoute(
           builder: (_) => ReaderPage(
             title: data['title'] ?? '阅读模式',
             html: data['html']!,
@@ -415,13 +416,13 @@ class _BrowserScreenState extends State<BrowserScreen> {
   void _openDownloads(BuildContext sheetContext) {
     Navigator.of(sheetContext).pop();
     Navigator.of(context)
-        .push<void>(MaterialPageRoute(builder: (_) => const DownloadPage()));
+        .push<void>(CupertinoPageRoute(builder: (_) => const DownloadPage()));
   }
 
   void _openCacheManager(BuildContext sheetContext) {
     Navigator.of(sheetContext).pop();
     Navigator.of(context)
-        .push<void>(MaterialPageRoute(builder: (_) => const CacheManagerPage()));
+        .push<void>(CupertinoPageRoute(builder: (_) => const CacheManagerPage()));
   }
 
   /// 页面加载完成：更新标签元数据并写入历史（无痕模式下不记录）。
@@ -662,7 +663,6 @@ class _MoreMenuSheet extends StatefulWidget {
 }
 
 class _MoreMenuSheetState extends State<_MoreMenuSheet> {
-  bool _gravityEnabled = false;
   bool _adBlockEnabled = false;
   List<Map<String, dynamic>> _ordered = [];
 
@@ -673,12 +673,10 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> {
   }
 
   Future<void> _init() async {
-    final enabled = await SettingsService.instance.isGravitySensorEnabled();
     final adBlock = await SettingsService.instance.isAdBlockEnabled();
     final order = await SettingsService.instance.getMenuOrder();
     if (!mounted) return;
     setState(() {
-      _gravityEnabled = enabled;
       _adBlockEnabled = adBlock;
       if (order.isNotEmpty) {
         final map = {for (final e in widget.items) e['id'] as String: e};
@@ -748,48 +746,37 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> {
                 ],
               ),
             ),
-            if (_gravityEnabled)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '长按拖拽可调整顺序',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '长按拖拽可调整顺序',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).hintColor,
                   ),
                 ),
               ),
+            ),
             Flexible(
-              child: _gravityEnabled
-                  ? ReorderableListView.builder(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      itemCount: _ordered.length,
-                      itemBuilder: (context, index) {
-                        final item = _ordered[index];
-                        return _sheetItem(
-                          key: ValueKey(item['id']),
-                          icon: item['icon'] as IconData,
-                          label: item['label'] as String,
-                          onTap: () => widget.onTapItem(item['id'] as String),
-                          reorderable: true,
-                        );
-                      },
-                      onReorderItem: _onReorder,
-                    )
-                  : ListView(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      children: [
-                        for (final item in _ordered)
-                          _sheetItem(
-                            key: ValueKey(item['id']),
-                            icon: item['icon'] as IconData,
-                            label: item['label'] as String,
-                            onTap: () => widget.onTapItem(item['id'] as String),
-                          ),
-                      ],
-                    ),
+              child: ReorderableListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: _ordered.length,
+                itemBuilder: (context, index) {
+                  final item = _ordered[index];
+                  return _sheetItem(
+                    key: ValueKey(item['id']),
+                    context: context,
+                    icon: item['icon'] as IconData,
+                    label: item['label'] as String,
+                    onTap: () => widget.onTapItem(item['id'] as String),
+                    reorderable: true,
+                  );
+                },
+                onReorderItem: _onReorder,
+              ),
             ),
             const SizedBox(height: 8),
           ],
@@ -803,15 +790,27 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> {
 /// 更多菜单项（reorderable=true 时显示拖拽手柄）。
 Widget _sheetItem({
   Key? key,
+  required BuildContext context,
   required IconData icon,
   required String label,
   required VoidCallback onTap,
   bool reorderable = false,
 }) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   return ListTile(
     key: key,
-    leading: Icon(icon, size: 22, color: const Color(0xFF374151)),
-    title: Text(label, style: const TextStyle(fontSize: 15)),
+    leading: Icon(
+      icon,
+      size: 22,
+      color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151),
+    ),
+    title: Text(
+      label,
+      style: TextStyle(
+        fontSize: 15,
+        color: isDark ? Colors.white : const Color(0xFF1F2937),
+      ),
+    ),
     trailing: reorderable
         ? const Icon(Icons.drag_handle, size: 20, color: Color(0xFFB0B7C3))
         : null,

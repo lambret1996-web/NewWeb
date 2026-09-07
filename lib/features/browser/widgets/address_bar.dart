@@ -15,6 +15,7 @@ class AddressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
       child: TextField(
@@ -24,7 +25,10 @@ class AddressBar extends StatelessWidget {
         autocorrect: false,
         enableSuggestions: false,
         onSubmitted: onSubmit,
-        style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
+        style: TextStyle(
+          fontSize: 14,
+          color: isDark ? Colors.white : const Color(0xFF1F2937),
+        ),
         decoration: InputDecoration(
           hintText: '输入网址或搜索内容',
           hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
@@ -41,7 +45,7 @@ class AddressBar extends StatelessWidget {
           ),
           isDense: true,
           filled: true,
-          fillColor: Colors.white,
+          fillColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
           contentPadding: const EdgeInsets.symmetric(vertical: 8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
